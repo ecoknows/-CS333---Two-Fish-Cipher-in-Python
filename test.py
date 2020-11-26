@@ -9,8 +9,7 @@ def _32bit_ops(ops):
     a=ctypes.c_int32(ops)
     return a.value
 
-
-print(_32bit_ops(-2147483648))
+print(len("82168b77b7ef6e133d248cdca179754"))
 def _limiter(num,distance):
     _b = "{0:b}".format(num)
     if(num < 0):
@@ -34,13 +33,6 @@ def _limiter(num,distance):
     return int(_b,2)
 
 
-def shiftRight_32(num, distance):
-    _r = -2147483648;
-    if (num % 2 == 0):
-        _r = 0;
-    if(num < 0):
-        return (int(int(_negative_twos_complement(num),2)/2) | _r)
-    return (_32bit_ops(num >> distance) | _r)
 
 def _byte_limit(_b):
     _bin = bin(_b);
@@ -72,30 +64,44 @@ def _byte_limit(_b):
 def _latest_1s(_b):
     for i in range(len(_b)):
         if _b[-i] == '1':
-            return(-i)
-    return 0;
+            if -i == 0 : 
+                return -1
+            else :
+                return -i
+    return -1;
 
 def _negative_twos_complement(num):
     _b = "{0:b}".format(num)
     if(num < 0):
         _b = _b[1:]
-        print(_b)
+        #print(_b, ' 1')
         x = len(_b);
         y = 16
 
         if y < x :
-            y *= round(x/y)
+            temp = x/y
+            if temp != 0.0:
+                temp = int(temp) + 1
+            temp = int(temp);
+            y *= temp
 
         _add = (y-x);
         _b = ('0'*_add+"{0:b}".format(num*-1))
+
         _l = _latest_1s(_b)
         _b = _b[0:_l].replace('0','3').replace('1','0').replace('3','1')
+
         _b = _b +'1'+ '0'*(-_l-1)
     return _b
 
-#print(shiftRight_32(-813775952, 1))
-#print(_negative_twos_complement(-813775952))
 
+def shiftRight_32(num, distance):
+    _r = -2147483648;
+    if (num % 2 == 0):
+        _r = 0;
+    if(num < 0):
+        return (int(int(_negative_twos_complement(num),2)/2) | _r)
+    return (_32bit_ops(num >> distance) | _r)
 
 
 def _getByte(num):
@@ -123,8 +129,8 @@ def _dec_message(message):
         result[i] = _32bit_ops(int(_b,16));
     print(result)
 
-_dec_message("043D23098D7BCB63EBEE9F3DB2C872D3")
-print(_32bit_ops(1894582921))
+#print((-3968645>>1) | (-2147483648) ," He" )
+#print(shiftRight_32(-3968645, 1), " Answer")
 '''
 te_ = '00110000100000010011110001010000'
 latest_1s = _latest_1s(te_);

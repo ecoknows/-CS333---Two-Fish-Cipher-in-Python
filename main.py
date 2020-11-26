@@ -1,6 +1,4 @@
-from Galua256 import Galua
 import ctypes
-import binascii
 
 t00 = [ 0x8, 0x1, 0x7, 0xD, 0x6, 0xF, 0x3, 0x2, 0x0, 0xB, 0x5, 0x9, 0xE, 0xC, 0xA, 0x4];
 t01 = [ 0xE, 0xC, 0xB, 0x8, 0x1, 0x2, 0x3, 0x5, 0xF, 0x4, 0xA, 0x6, 0x7, 0x0, 0x9, 0xD];
@@ -17,6 +15,62 @@ MDS = [
         [0xEF, 0x5B, 0x01, 0xEF],
         [0xEF, 0x01, 0xEF, 0x5B],
       ]
+
+WRITE = 0;
+FILE = 1;
+
+
+def _byte_256(intValue):
+    _b = bin(intValue)[-8:];
+    if _b[0] == 'b':
+        _b = bin(intValue)[-10:];
+        if  _b[0] == '-':
+            return(_byte_limit(int(bin(intValue)[-10:], 2)))
+        else: 
+            return(_byte_limit(int(bin(intValue)[-9:],2)))
+    _b = bin(intValue)[-9:];
+    if _b[0] == '-':
+        return(_byte_limit(int(bin(intValue)[-9:], 2)))
+    return(_byte_limit(int(bin(intValue)[-8:], 2)))
+    
+def _byte_limit_256(num):
+    mask = (1 << 8) - 1
+    little = num & mask
+    if(little > 127):
+        return (-1)*(255 + 1 - little)
+    if little < -127:
+        return (255 + 1 + little)
+    return little
+
+class Galua:
+    def __init__(self,mask):
+        self.mask = mask
+
+
+    
+    def add(self,a, b):
+        _b = _byte_256(a^b);
+        return _byte_limit_256(_b)
+
+    def multiply(self,a, b):
+        p = 0
+        for i in range(8):
+            if((b&1) != 0):
+                p ^= a
+                p = _byte_limit_256(p)
+            carry = _byte_256(a & 0x80)
+            a<<=1
+            a = _byte_limit_256(a)
+
+            if(carry != 0):
+                a ^= self.mask
+                
+            b >>= 1
+            if(b > 127):
+                b = (-1)*(255 + 1 - b)
+            
+
+        return p
 
 
 def _byte_limit(_b):
@@ -64,7 +118,6 @@ def encrypt(plainText, key, debug):
     roundKey45 = roundKeys(key,2);
     roundKey67 = roundKeys(key,3);
     whitened = whitening(plainText, roundKey01[0], roundKey01[1], roundKey23[0], roundKey23[1]);
-    print(whitened, 'whitened')
     for i in range(16):
         #print("whitened : [",i,']',whitened)
         whitened = encryptionRound(whitened, key, i)
@@ -130,6 +183,7 @@ def encryptionRound(input, key, round):
     f1 = _32bit_ops(pPht[1] + roundKeys2r_8_2r_9[1]);
     c2 = shiftRight_32((f0 ^ input[2]), 1); # ito yung mali
     c3 = _32bit_ops((f1 ^ shiftLeft_32(input[3], 1)));
+    '''
     print(" Round: ", round);
     print("s: ",  s)
     print("t0: ",  t0)
@@ -138,9 +192,10 @@ def encryptionRound(input, key, round):
     print("roundKeys2r_8_2r_9: ",  roundKeys2r_8_2r_9)
     print("f0: ",  f0)
     print("f1: ",  f1)
-    print("c2: ",  c2, " PARAMS: ",(f0 ^ input[2]) )
+    print("c2: ",  c2, " PARAMS: ",(f0 ^ input[2]) ," [ ", f0 ," ," , input[2])
     print("c3: ",  c3)
     print("=============================")
+    '''
 
     return [input[0], input[1], c2, c3 ]
 
@@ -265,8 +320,11 @@ def shiftLeft_32(val, distance):
 def _latest_1s(_b):
     for i in range(len(_b)):
         if _b[-i] == '1':
-            return(-i)
-    return 0;
+            if -i == 0 : 
+                return -1
+            else :
+                return -i
+    return -1;
 
 def _negative_twos_complement(num):
     _b = "{0:b}".format(num)
@@ -276,14 +334,21 @@ def _negative_twos_complement(num):
         y = 16
 
         if y < x :
-            y *= round(x/y)
+            temp = x/y
+            if temp != 0.0:
+                temp = int(temp) + 1
+            temp = int(temp);
+            y *= temp
 
         _add = (y-x);
         _b = ('0'*_add+"{0:b}".format(num*-1))
+
         _l = _latest_1s(_b)
         _b = _b[0:_l].replace('0','3').replace('1','0').replace('3','1')
+
         _b = _b +'1'+ '0'*(-_l-1)
     return _b
+
 
 def shiftRight_32(num, distance):
     _r = -2147483648;
@@ -338,16 +403,16 @@ def _get_string_bytes(plainText):
 #main()
 
 def _int_to_char(int):
-    #stop = 0
+    stop = 0
     result = ''
     for i in range(4):
         _b = _asBytes(int[i])
         for x in range(len(_b)):
             _h = (hex((_getByte(_b[x])) & 0xff)[2:]);
-            #if _h == '0': return result
-                #stop+=1
-            #if stop == 2 : return result
-            #if len(_h) == 1 : _h = '0'+_h
+            if _h == '0':
+                stop+=1
+            if stop == 2 : return result
+            if len(_h) == 1 : _h = '0'+_h
             #print(_h)
             result += _h
     return result
@@ -356,35 +421,33 @@ def Chevy(plainText, key):
     plainText = _get_string_bytes(plainText);
     p = [0]*4
     p = convertInput(plainText,0)
-    print("Encrypted-text : ", encrypt(p,key,False))
     #print(_int_to_char(encrypt(p,key,False)))
     #print(encrypt(p,key,False), " Toyo")
     #print(encrypt(p,key,False),  " Wazap")
-   # return _int_to_char(encrypt(p,key,False));
+    return _int_to_char(encrypt(p,key,False));
 
-def _message_to_int(message): ## PROBLEM "caecat cupidatat"
+def _message_to_int(message):
     result = [0]*4
-    for i in range(4):
-        temp = [0]*4
-        end = 8 * (i+1) - 1;
-        _b = ''
-        for j in range(4):
-            first = end - (j*2)
-            #print('Message :',message,' first: ',first, " Watda")
-            _b += message[first-1] + message[first]
-        result[i] = _32bit_ops(int(_b,16));
+    try :
+        for i in range(4):
+            temp = [0]*4
+            end = 8 * (i+1) - 1;
+            _b = ''
+            for j in range(4):
+                first = end - (j*2)
+                _b += message[first-1] + message[first]
+                #print("message : ", message, " first : ", first)
+            result[i] = _32bit_ops(int(_b,16));
+    except:
+        print("Not decryptable!")
     return result
 
 def Chevy_Decrypt(encrypted_text, key):
-    #print(encrypted_text, key)
-    #print(' AkoPogiAko : ', encrypted_text)
     p = _message_to_int(encrypted_text)
-    #print(_int_to_char(decrypt(p,key,False)).upper(), " Cass")
     return _int_to_char(decrypt(p,key,False));
 
 def Camry(plainText):
     result = []
-    print(len(plainText))
     _l = len(plainText)/16
     if (_l % 1) != 0.0: _l= _l+1
     _l = int(_l)
@@ -401,7 +464,6 @@ def Camry(plainText):
 
 def Camry_32(plainText):
     result = []
-    print(len(plainText))
     _l = len(plainText)/32
     if (_l % 1) != 0.0: _l= _l+1
     _l = int(_l)
@@ -416,11 +478,8 @@ def Camry_32(plainText):
         temp += 32
     return result
 
-def _TwoFish_Encrypt():
-    #print("Plain Text : ", end='')
-    plainText = 'caecat cupidatat'
-    #print("Key : ", end='')
-    key = 'jecos'
+def _TwoFish_Encrypt(plainText, key, stat, dir):
+    
     key = _get_string_bytes(key);
     k = [0]*4
     k = convertInput(key,0)
@@ -430,201 +489,107 @@ def _TwoFish_Encrypt():
     #print("plainText : ", plainText)
     encrypted_text = []
     for i in range(len(plainText)):
-        encrypted_text.append(Chevy(plainText[i],k).upper())
+        encrypted_text.append(Chevy(plainText[i],k))
 
     _enc_result = ''.join(encrypted_text);
-    print("encrypted Text : "+_enc_result)
+    print()
+    print("Encrypted Text : ",_enc_result)
+    print()
+    if stat == FILE:
+        print(" I will now encrypt the file : ", dir)
+        f = open(dir,'w')
+        f.write(_enc_result)
+        print("Successfull! check the file now")
 
-def _TwoFish_Decrypt():
 
-    print("Encrypted Text : ", end='')
-    encryptedText = input()
-    print("Key : ", end='')
-    key = input()
+def _TwoFish_Decrypt(encryptedText, key, stat, dir):
     key = _get_string_bytes(key);
     k = [0]*4
     k = convertInput(key,0)
-    print(k,' wazap')
     _array_encryptedText = Camry_32(encryptedText)
     decrypted_text = []
     for i in range(len(_array_encryptedText)):
         decrypted_text.append(Chevy_Decrypt(_array_encryptedText[i],k))
 
-    #decrypted_text_join = ''.join(decrypted_text)
-
+    decrypted_text_join = ''.join(decrypted_text)
+    decrypted_text_join = decrypted_text_join.replace("00",'');
     #decrypted_text = bytes.fromhex(''.join(decrypted_text)).decode('utf-8')
-    #print(bytes.fromhex(decrypted_text_join).decode('utf-8'))
+    print()
+    try:
+        print("Decrypted Text: ",bytes.fromhex(decrypted_text_join).decode('utf-8'))
+    except:
+        print("Decrypted Text: ",decrypted_text_join)
+    print()
+    if stat == FILE:
+        print(" I will create a file now at the directory : ", dir)
+        f = open(dir,'w')
+        f.write(bytes.fromhex(decrypted_text_join).decode('utf-8'))
+        print("Successfull Decrypted! check the file now")
     
-
-def main():
+def _Write():
     print("[E]ncrypt or [D]ecrypt? : ", end='')
     _c = input()
+    print("Text : ", end='')
+    plainText = input()
+    _k_bol = True
+    while (_k_bol):
+        print("Please input the key that is maximum of 16 letters =>  ", end='')
+        key = input()
+        if len(key) <= 16 : 
+            _k_bol = False
+        else:
+            print(" 16 letters or less only!")
+    
+    if _c.upper() == 'E':
+        _TwoFish_Encrypt(plainText, key, WRITE, False)
+    elif _c.upper() == 'D':
+        _TwoFish_Decrypt(plainText, key, WRITE, False)
+
+def _File():
+    print("Kindly type the directory of the text file which includes the name of it for example C:/Desktop/Eco.txt => ", end='')
+    _dir = input()
+    _dir = '/'.join(_dir.split('\\'));
+    _read = open(_dir)
+    plainText =_read.read();
+    print("The text : => ", plainText)
+
+    print("[E]ncrypt or [D]ecrypt? : ", end='')
+    _c = input()
+    print("Please input the key that is maximum of 16 letters => ",end='')
+    _k_bol = True
+    while (_k_bol):
+        key = input()
+        if len(key) <= 16 : 
+            _k_bol = False
+        else:
+            print(" 16 letters or less only!")
     if _c == 'E':
-        _TwoFish_Encrypt()
+        _TwoFish_Encrypt(plainText, key, FILE, _dir)
     elif _c == 'D':
-        _TwoFish_Decrypt()
+        _TwoFish_Decrypt(plainText, key, FILE, _dir)
 
 
-#main()
+def main():
+    _c = ''
+    while(_c != 'Y'):
+        print()
+        print("What type : [W]rite or a [F]ile? : ", end='')
+        _c = input()
+        if _c.upper() == 'W':
+            _Write()
+        elif _c.upper() == 'F':
+            _File()
+        else:
+            print("Want to exit ? [Y]es or [N]o : ", end='')
+            _c = input()
+            _c = _c.upper()
+   
 
-_TwoFish_Encrypt()
-
-
-
-
-
-
-
-
-#print(len("Jerico C. Villaraza Chevy Quitquitan Pogi Ako Ba dsa")/16)
-
-#print(convertInput(16))
-#print(_getByte(-19322609), " Wazap")
-# actual bytes in the the string
-#driver()
-#print(hex(50462976));
-#print(hex(45))
-
-'''
-926135967 kABOG
--941024491 kABOG
-1506870803 kABOG
--1527088406 kABOG
-'''
-'''
-9FB63337 151BE9C7 1306D159 EA7AFAA4    
-'''
-
-#print(_getByte(926135967 >> 8))
-
-'''
-
-def _hash(message):
-    h = h0;
-    for i in range(0,len(message),length):
-        Mi = convertInput(message, i)
-        A = [Mi[0] ^ h[0], Mi[1] ^ h[1], Mi[2] ^ h[2], Mi[3] ^ h[3]]
-        B = h
-        C = Mi
-        _encrypt = encrypt(A,B,False)
-        h = _encrypt
-        #h = [_encrypt[0] ^ C[0], _encrypt[1]^C[1], _encrypt[2] ^ C[2], _encrypt[3] ^ C[3]]
-        print(h, ' _encrypt')
-    # TAGA KUHA    
-    result = [0]*16
-    for i in range(4):
-        for j in range(4):
-            #print(h[i], " Wat")
-            #print(_getByte(h[i] >> (8*j)) , "Hakdog")
-            result[i*4+j] = _getByte(h[i] >> (8*j))#int(int(_negative_twos_complement(num),2)/2)
-    return result;
+#f = open("C:/Users/pc/Desktop/Github/test.txt","r")
+#print(f.read())
 
 
 
-
-def _convert_bits_to_hex(_b):
-    result = ''
-    for i in range(len(_b)):
-        _hx = hex((_getByte(_b[i])) & 0xff)[2:]
-        if(len(_hx) == 1):
-            _hx = '0'+ _hx;
-        result += _hx.upper()
-    return result;
+main()
 
 
-def _get_string_bytes(plainText):
-    arr = bytes(plainText, 'ascii')
-    result = []
-    for byte in arr:
-        result.append(byte)
-    return result
-
-def _convert_key_(key):
-    length = 16
-    key = _get_string_bytes(key)
-    result =[0,0,0,0]
-    for i in range(0, len(key),length):
-        result = convertInput(key, i)
-    return result
-
-
-def two_fish_encrypt(message,key):
-    length = 16
-    for i in range(0,len(message),length):
-        Mi = convertInput(message, i)
-        A = [_32bit_ops(Mi[0] ^ key[0]), _32bit_ops(Mi[1] ^ key[1]), _32bit_ops(Mi[2] ^ key[2]), _32bit_ops(Mi[3] ^ key[3])]
-        B = key
-        #C = Mi
-        _encrypt = encrypt(A,B,False)
-        print(_encrypt)
-        message = _encrypt
-        #h = [_encrypt[0] ^ C[0], _encrypt[1]^C[1], _encrypt[2] ^ C[2], _encrypt[3] ^ C[3]]
-    
-    # TAGA KUHA    
-    result = [0]*16
-    for i in range(4):
-        for j in range(4):
-            #print(h[i], " Wat")
-            #print(_getByte(h[i] >> (8*j)) , "Hakdog")
-            result[i*4+j] = _getByte(message[i] >> (8*j))#int(int(_negative_twos_complement(num),2)/2)
-    
-    return _convert_bits_to_hex(result);
-
-def _message_to_int(message):
-    result = [0]*4
-    for i in range(4):
-        temp = [0]*4
-        end = 8 * (i+1) - 1;
-        _b = ''
-        for j in range(4):
-            first = end - (j*2)
-            _b += message[first-1] + message[first]
-        result[i] = _32bit_ops(int(_b,16));
-    return result
-
-def _int_to_char(int):
-    result = ''
-    for i in range(4):
-        _b = _asBytes(int[i])
-        for x in range(len(_b)):
-            _h = (hex((_getByte(_b[x])) & 0xff)[2:]);
-            if _h == '0': return result
-            result += _h
-    return result
-
-
-def two_fish_decrypt(message, key):
-    message = _message_to_int(message)
-    print(message)
-    _decrypt = decrypt(message, key, False)
-    result = _int_to_char(_decrypt)
-    return bytes.fromhex(result).decode('utf-8')
-
-'''
-
-
-'''
-def tester():
-    plainText = 'aza Chevy Quitqu'
-    key ="basta susi iyon"
-    plainText = _get_string_bytes(plainText);
-    key = _get_string_bytes(key);
-    p = []*4
-    k = []*4
-    p = convertInput(plainText,0)
-    k = convertInput(key,0)
-
-
-    _en = encrypt(p,k,False)
-    print(p,k)
-
-    print(_en)
-    _de = decrypt(_en,k,False)
-    print(_de)
-
-    for i in range(4):
-        _b = _asBytes(_de[i])
-        for x in range(len(_b)):
-            print((hex((_getByte(_b[x])) & 0xff)[2:]).upper() ,  end =" ")
-            #print(hex(_getByte(_b[x])))
-'''
