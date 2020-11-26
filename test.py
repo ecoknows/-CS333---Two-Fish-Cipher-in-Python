@@ -10,7 +10,7 @@ def _32bit_ops(ops):
     return a.value
 
 
-
+print(_32bit_ops(-2147483648))
 def _limiter(num,distance):
     _b = "{0:b}".format(num)
     if(num < 0):
@@ -124,7 +124,7 @@ def _dec_message(message):
     print(result)
 
 _dec_message("043D23098D7BCB63EBEE9F3DB2C872D3")
-
+print(_32bit_ops(1894582921))
 '''
 te_ = '00110000100000010011110001010000'
 latest_1s = _latest_1s(te_);

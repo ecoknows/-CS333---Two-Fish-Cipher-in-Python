@@ -64,7 +64,7 @@ def encrypt(plainText, key, debug):
     roundKey45 = roundKeys(key,2);
     roundKey67 = roundKeys(key,3);
     whitened = whitening(plainText, roundKey01[0], roundKey01[1], roundKey23[0], roundKey23[1]);
-
+    print(whitened, 'whitened')
     for i in range(16):
         #print("whitened : [",i,']',whitened)
         whitened = encryptionRound(whitened, key, i)
@@ -120,6 +120,7 @@ def deryptionRound(input, key, round):
     return [p2, p3, input[2], input[3]]
 
 def encryptionRound(input, key, round):
+    #print("key: ", key)
     s = getS(key)
     t0 = h(input[0], s[1], s[0])
     t1 = h(shiftLeft_32(input[1],8),s[1],s[0])
@@ -128,12 +129,11 @@ def encryptionRound(input, key, round):
     f0 = _32bit_ops(pPht[0] + roundKeys2r_8_2r_9[0]);
     f1 = _32bit_ops(pPht[1] + roundKeys2r_8_2r_9[1]);
     c2 = shiftRight_32((f0 ^ input[2]), 1); # ito yung mali
-    c3 = (f1 ^ shiftLeft_32(input[3], 1));
-    '''
+    c3 = _32bit_ops((f1 ^ shiftLeft_32(input[3], 1)));
     print(" Round: ", round);
     print("s: ",  s)
     print("t0: ",  t0)
-    print("t1: ",  t1)
+    print("t0: ",  t0 , " PARAMS: ",input[0], s[1], s[0])
     print("pPht: ",  pPht)
     print("roundKeys2r_8_2r_9: ",  roundKeys2r_8_2r_9)
     print("f0: ",  f0)
@@ -141,7 +141,6 @@ def encryptionRound(input, key, round):
     print("c2: ",  c2, " PARAMS: ",(f0 ^ input[2]) )
     print("c3: ",  c3)
     print("=============================")
-    '''
 
     return [input[0], input[1], c2, c3 ]
 
@@ -152,6 +151,8 @@ def getS(key):
     m3 = key[3]
     S0 = RS(m0,m1)
     S1 = RS(m2,m3)
+    #print("S0: ", S0)
+    #print("S1: ", S1)
     return([S0,S1])
 
 def RS(X,Y):
@@ -234,11 +235,6 @@ def h(input, l1, l2):
     x = _asBytes(input)
     y = _asBytes(l2)
     z = _asBytes(l1)
-    '''
-    print(x , ': x')
-    print(y , ': y')
-    print(z , ': z')
-    '''
    # print(_byte( q0(x[0]) ^ y[0]) , ' Input : ' , input, ' q1( _byte( q0(x[2]) ^ y[2]) ) ^ z[2] :',q1( _byte( q0(x[2]) ^ y[2]) ) ^z[2], " x[2]: ", x[2])
     result = [
         q1(_getByte(q0( _getByte( q0(x[0]) ^ y[0]) ) ^z[0])),
@@ -352,7 +348,7 @@ def _int_to_char(int):
                 #stop+=1
             #if stop == 2 : return result
             #if len(_h) == 1 : _h = '0'+_h
-            print(_h)
+            #print(_h)
             result += _h
     return result
 
@@ -360,10 +356,11 @@ def Chevy(plainText, key):
     plainText = _get_string_bytes(plainText);
     p = [0]*4
     p = convertInput(plainText,0)
+    print("Encrypted-text : ", encrypt(p,key,False))
     #print(_int_to_char(encrypt(p,key,False)))
     #print(encrypt(p,key,False), " Toyo")
-    print(encrypt(p,key,False),  " Wazap")
-    return _int_to_char(encrypt(p,key,False));
+    #print(encrypt(p,key,False),  " Wazap")
+   # return _int_to_char(encrypt(p,key,False));
 
 def _message_to_int(message): ## PROBLEM "caecat cupidatat"
     result = [0]*4
@@ -420,16 +417,17 @@ def Camry_32(plainText):
     return result
 
 def _TwoFish_Encrypt():
-    print("Plain Text : ", end='')
-    plainText = input()
-    print("Key : ", end='')
-    key = input()
+    #print("Plain Text : ", end='')
+    plainText = 'caecat cupidatat'
+    #print("Key : ", end='')
+    key = 'jecos'
     key = _get_string_bytes(key);
     k = [0]*4
     k = convertInput(key,0)
     plainText = Camry(plainText)
-    print(plainText)
-    print(k,' wazap')
+    #print(plainText)
+    
+    #print("plainText : ", plainText)
     encrypted_text = []
     for i in range(len(plainText)):
         encrypted_text.append(Chevy(plainText[i],k).upper())
@@ -438,6 +436,7 @@ def _TwoFish_Encrypt():
     print("encrypted Text : "+_enc_result)
 
 def _TwoFish_Decrypt():
+
     print("Encrypted Text : ", end='')
     encryptedText = input()
     print("Key : ", end='')
@@ -451,10 +450,10 @@ def _TwoFish_Decrypt():
     for i in range(len(_array_encryptedText)):
         decrypted_text.append(Chevy_Decrypt(_array_encryptedText[i],k))
 
-    decrypted_text_join = ''.join(decrypted_text)
+    #decrypted_text_join = ''.join(decrypted_text)
 
     #decrypted_text = bytes.fromhex(''.join(decrypted_text)).decode('utf-8')
-    print(bytes.fromhex(decrypted_text_join).decode('utf-8'))
+    #print(bytes.fromhex(decrypted_text_join).decode('utf-8'))
     
 
 def main():
@@ -466,9 +465,9 @@ def main():
         _TwoFish_Decrypt()
 
 
-main()
+#main()
 
-
+_TwoFish_Encrypt()
 
 
 
