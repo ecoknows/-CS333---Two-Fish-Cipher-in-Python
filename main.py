@@ -342,13 +342,17 @@ def _get_string_bytes(plainText):
 #main()
 
 def _int_to_char(int):
+    #stop = 0
     result = ''
     for i in range(4):
         _b = _asBytes(int[i])
         for x in range(len(_b)):
             _h = (hex((_getByte(_b[x])) & 0xff)[2:]);
-            if _h == '0': return result
-            if len(_h) == 1 : _h = '0'+_h
+            #if _h == '0': return result
+                #stop+=1
+            #if stop == 2 : return result
+            #if len(_h) == 1 : _h = '0'+_h
+            print(_h)
             result += _h
     return result
 
@@ -356,10 +360,12 @@ def Chevy(plainText, key):
     plainText = _get_string_bytes(plainText);
     p = [0]*4
     p = convertInput(plainText,0)
+    #print(_int_to_char(encrypt(p,key,False)))
     #print(encrypt(p,key,False), " Toyo")
+    print(encrypt(p,key,False),  " Wazap")
     return _int_to_char(encrypt(p,key,False));
 
-def _message_to_int(message):
+def _message_to_int(message): ## PROBLEM "caecat cupidatat"
     result = [0]*4
     for i in range(4):
         temp = [0]*4
@@ -367,12 +373,14 @@ def _message_to_int(message):
         _b = ''
         for j in range(4):
             first = end - (j*2)
+            #print('Message :',message,' first: ',first, " Watda")
             _b += message[first-1] + message[first]
         result[i] = _32bit_ops(int(_b,16));
     return result
 
 def Chevy_Decrypt(encrypted_text, key):
     #print(encrypted_text, key)
+    #print(' AkoPogiAko : ', encrypted_text)
     p = _message_to_int(encrypted_text)
     #print(_int_to_char(decrypt(p,key,False)).upper(), " Cass")
     return _int_to_char(decrypt(p,key,False));
@@ -419,9 +427,9 @@ def _TwoFish_Encrypt():
     key = _get_string_bytes(key);
     k = [0]*4
     k = convertInput(key,0)
-
     plainText = Camry(plainText)
     print(plainText)
+    print(k,' wazap')
     encrypted_text = []
     for i in range(len(plainText)):
         encrypted_text.append(Chevy(plainText[i],k).upper())
@@ -437,13 +445,12 @@ def _TwoFish_Decrypt():
     key = _get_string_bytes(key);
     k = [0]*4
     k = convertInput(key,0)
-
+    print(k,' wazap')
     _array_encryptedText = Camry_32(encryptedText)
     decrypted_text = []
     for i in range(len(_array_encryptedText)):
         decrypted_text.append(Chevy_Decrypt(_array_encryptedText[i],k))
 
-    print(decrypted_text)
     decrypted_text_join = ''.join(decrypted_text)
 
     #decrypted_text = bytes.fromhex(''.join(decrypted_text)).decode('utf-8')
@@ -460,6 +467,10 @@ def main():
 
 
 main()
+
+
+
+
 
 
 
